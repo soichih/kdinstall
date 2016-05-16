@@ -101,7 +101,7 @@ export class AppComponent {
             });
           } else {
             this.installer_name = "thinlinc-client-4.5.0-4930.x86_64.rpm";
-            this.install_cmd = "rpm -i localinstall";
+            this.install_cmd = "rpm -i";
             this.download_path = os.tmpdir()+'/'+this.installer_name;
           }
         });
