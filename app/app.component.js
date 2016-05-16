@@ -52,7 +52,7 @@ var AppComponent = (function () {
         this.configured = false;
         this.configure_error = "";
         this.logo_path = null; //location for custom thinlinc branding
-        this.tlclient = "tlclient";
+        this.tlclient = "/opt/thinlinc/bin/tlclient";
         this.toasterService = toasterService;
         //let's just support x64 for now..
         if (os.arch() != "x64") {
@@ -82,7 +82,7 @@ var AppComponent = (function () {
                     }
                     else {
                         _this.installer_name = "thinlinc-client-4.5.0-4930.x86_64.rpm";
-                        _this.install_cmd = "yum localinstall";
+                        _this.install_cmd = "rpm -i localinstall";
                         _this.download_path = os.tmpdir() + '/' + _this.installer_name;
                     }
                 });

@@ -63,7 +63,7 @@ export class AppComponent {
     configured: boolean = false;
     configure_error: string = "";
     logo_path: string = null; //location for custom thinlinc branding
-    tlclient: string = "tlclient";
+    tlclient: string = "/opt/thinlinc/bin/tlclient";
     
     @ViewChild('focus') focus_elem;
         
@@ -101,7 +101,7 @@ export class AppComponent {
             });
           } else {
             this.installer_name = "thinlinc-client-4.5.0-4930.x86_64.rpm";
-            this.install_cmd = "yum localinstall";
+            this.install_cmd = "rpm -i localinstall";
             this.download_path = os.tmpdir()+'/'+this.installer_name;
           }
         });

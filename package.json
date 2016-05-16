@@ -2,7 +2,7 @@
   "name": "kdinstall",
   "version": "1.0.0",
   "description": "IU Karst Desktop Installer",
-  "main": "index.js",
+  "main": "app.js",
   "scripts": {
     "start": "electron app",
     "postinstall": "typings install",
@@ -44,7 +44,6 @@
     "request": "^2.72.0",
     "request-progress": "^2.0.1",
     "rxjs": "5.0.0-beta.6",
-    "sudo": "^1.0.3",
     "systemjs": "0.19.27",
     "thinlinc": "^1.0.3",
     "whereis": "^0.4.0",
