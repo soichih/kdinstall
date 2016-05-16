@@ -40,6 +40,7 @@ var AppComponent = (function () {
         };
         //download / install thinlinc
         this.downloaded = false;
+        this.download_error = "";
         this.download_progress = 0;
         this.download_path = null;
         this.installer_name = null;
@@ -55,6 +56,7 @@ var AppComponent = (function () {
         //let's just support x64 for now..
         if (os.arch() != "x64") {
             this.toasterService.pop('error', 'Unsupported Architecture', os.arch());
+            this.state = 'failed';
             return;
         }
         //determine which installer to use
@@ -66,6 +68,7 @@ var AppComponent = (function () {
                         whereis('dpkg', function (err, path) {
                             if (err) {
                                 _this.toasterService.pop('error', 'Unsupported package manager', "Couldn't find yum nor dpkg");
+                                _this.state = 'failed';
                             }
                             else {
                                 //this._ngZone.run(() => {
@@ -98,6 +101,7 @@ var AppComponent = (function () {
                 break;
             default:
                 this.toasterService.pop('error', 'Unsupported Platform', os.platform());
+                this.state = 'failed';
                 return;
         }
         //console.log("logo_path:"+this.logo_path);
@@ -105,11 +109,22 @@ var AppComponent = (function () {
             console.log("done installing sshkey");
             _this.configure(e);
         });
+        this.broadcaster.on('failed', function () { return _this.state = 'failed'; });
+        setTimeout(function () {
+            _this.focus_elem.nativeElement.focus();
+        }, 1000);
     }
     AppComponent.prototype.stop = function () {
         //TODO - depending on the state, do some cleanup
         this.state = "start";
         this.download_progress = 0;
+    };
+    AppComponent.prototype.retry = function () {
+        this.state = "start";
+        this.submitted = false;
+        this.download_error = "";
+        this.install_error = "";
+        this.configure_error = "";
     };
     AppComponent.prototype.submit = function () {
         this.submitted = true;
@@ -140,7 +155,11 @@ var AppComponent = (function () {
                     }); //this is the new apply?
                 })
                     .on('error', function (err) {
-                    _this.toasterService.pop('error', 'Download Failed', err);
+                    //this.toasterService.pop('error', 'Download Failed', err);
+                    _this._ngZone.run(function () {
+                        _this.download_error = err;
+                        _this.state = 'failed';
+                    });
                 })
                     .on('end', function (err) {
                     if (err)
@@ -166,6 +185,7 @@ var AppComponent = (function () {
                         console.log(data.toString());
                     });
                     ps.stderr.on('data', function (data) {
+                        console.log("error received");
                         console.error(data.toString());
                     });
                 }
@@ -173,10 +193,11 @@ var AppComponent = (function () {
         };
         //run the installer as root
         sudo.exec(this.install_cmd + ' ' + this.download_path, options, function (err, data) {
-            console.log(data);
+            console.log(data); //message from installer... should I display?
             _this._ngZone.run(function () {
                 if (err) {
                     _this.install_error = err;
+                    _this.state = 'failed';
                 }
                 else {
                     _this.installed = true;
@@ -202,6 +223,7 @@ var AppComponent = (function () {
             _this._ngZone.run(function () {
                 if (err) {
                     _this.configure_error = err;
+                    _this.state = 'failed';
                 }
                 else {
                     _this.configured = true;
@@ -224,6 +246,11 @@ var AppComponent = (function () {
         }, 1);
         */
     };
+    __decorate([
+        //location for custom thinlinc branding
+        core_1.ViewChild('focus'), 
+        __metadata('design:type', Object)
+    ], AppComponent.prototype, "focus_elem", void 0);
     AppComponent = __decorate([
         core_1.Component({
             selector: 'kdinstall',

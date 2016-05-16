@@ -31,7 +31,7 @@ var SCAService = (function () {
     }
     SCAService.prototype.generateSSHKeys = function () {
         return this.http.get(SCAService.PATH + '/resource/gensshkey')
-            .map(function (response) { return response.json(); });
+            .map(function (res) { return res.json(); });
     };
     SCAService.prototype.storeSSHKey = function (username, password, pubkey, comment) {
         var headers = new http_1.Headers();
@@ -43,7 +43,7 @@ var SCAService = (function () {
             comment: comment,
             host: "karst.uits.iu.edu"
         }), { headers: headers })
-            .map(function (response) { return response.json(); });
+            .map(function (res) { return res.json(); });
     };
     SCAService.homedir = function () {
         return process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];

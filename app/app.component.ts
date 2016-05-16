@@ -1,4 +1,4 @@
-import { Component, NgZone } from '@angular/core';
+import { Component, NgZone, Directive, Input, Inject, ViewChild } from '@angular/core';
 import { NgForm } from '@angular/common';
 import { PROGRESSBAR_DIRECTIVES } from 'ng2-bootstrap';
 import {ToasterContainerComponent, ToasterService} from 'angular2-toaster/angular2-toaster';
@@ -49,6 +49,7 @@ export class AppComponent {
     
     //download / install thinlinc
     downloaded: boolean = false;
+    download_error: string = "";
     download_progress: number = 0;
     download_path: string = null;
     installer_name: string = null;
@@ -62,6 +63,8 @@ export class AppComponent {
     configured: boolean = false;
     configure_error: string = "";
     logo_path: string = null; //location for custom thinlinc branding
+    
+    @ViewChild('focus') focus_elem;
         
     constructor(
       private toasterService: ToasterService, 
@@ -73,6 +76,7 @@ export class AppComponent {
       //let's just support x64 for now..
       if(os.arch() != "x64") {
         this.toasterService.pop('error', 'Unsupported Architecture', os.arch());
+        this.state = 'failed';
         return;
       }
 
@@ -85,6 +89,7 @@ export class AppComponent {
             whereis('dpkg', (err, path)=> {
               if(err) {
                 this.toasterService.pop('error', 'Unsupported package manager', "Couldn't find yum nor dpkg");
+                this.state = 'failed';
               } else {
                 //this._ngZone.run(() => {
                 //}); //this is the new apply?
@@ -115,6 +120,7 @@ export class AppComponent {
         break;
       default:
         this.toasterService.pop('error', 'Unsupported Platform', os.platform());
+        this.state = 'failed';
         return;
       }
       
@@ -124,12 +130,25 @@ export class AppComponent {
         console.log("done installing sshkey");
         this.configure(e);
       });
+      this.broadcaster.on('failed', ()=>this.state = 'failed');
+      
+      setTimeout(()=>{
+        this.focus_elem.nativeElement.focus();
+      }, 1000);
     }
     
     stop() {
       //TODO - depending on the state, do some cleanup
       this.state = "start";
       this.download_progress = 0;
+    }
+    
+    retry() {
+      this.state = "start";
+      this.submitted = false;
+      this.download_error = "";
+      this.install_error = "";
+      this.configure_error = "";
     }
     
     submit() {
@@ -162,7 +181,11 @@ export class AppComponent {
             }); //this is the new apply?
           })
           .on('error', (err) => {
-            this.toasterService.pop('error', 'Download Failed', err);
+            //this.toasterService.pop('error', 'Download Failed', err);
+            this._ngZone.run(() => {
+              this.download_error = err;
+              this.state = 'failed';
+            });
           })
           .on('end', (err) => {   
             if(err) return console.error(err);
@@ -187,6 +210,7 @@ export class AppComponent {
                 console.log(data.toString());
               });
               ps.stderr.on('data', function(data) {
+                console.log("error received");
                 console.error(data.toString());
               });
             }
@@ -195,10 +219,11 @@ export class AppComponent {
         
         //run the installer as root
         sudo.exec(this.install_cmd+' '+this.download_path, options, (err, data) => {
-          console.log(data);
+          console.log(data); //message from installer... should I display?
           this._ngZone.run(() => {
             if(err) {
               this.install_error = err;
+              this.state = 'failed';
             } else {
               this.installed = true;
               this.state = "sshkey";
@@ -244,6 +269,7 @@ export class AppComponent {
         this._ngZone.run(() => {
           if(err) {
             this.configure_error = err;
+            this.state = 'failed';
           } else {
             this.configured = true;
             this.state = "finished";

@@ -8,12 +8,17 @@
 
 <div *ngIf="state != 'finished'">    
     <p>This program will walk you through steps to install and configure Karst Desktop Client.</p>
+    
+    <div *ngIf="state == 'failed'">
+        <button class="btn btn-default" (click)="retry()">Retry</button>
+    </div>
+    
     <div [hidden]="submitted">
         <p>Please enter Karst username / password in order to install a new public key.</p>
         <form (ngSubmit)="submit()" #configureForm="ngForm">
             <div class="form-group">
                 <label for="name">Username</label>
-                <input type="text" class="form-control" [(ngModel)]="form.username" ngControl="name" #name="ngForm" required>
+                <input type="text" class="form-control" #focus [(ngModel)]="form.username" ngControl="name" #name="ngForm" required>
                 <div [hidden]="name.valid || name.pristine" class="alert alert-danger">Please enter username</div>
             </div>
             <div class="form-group">
@@ -32,25 +37,25 @@
 -->
 
     <br>
-
+    
     <div class="panel panel-default" *ngIf="state != 'start'">
     <ul class="list-group">
     <li class="list-group-item">
         <div class="row">
-        <div class="col-sm-4">
-            Download ThinLink Client
-        </div>
-        <div class="col-sm-8">
-            <div *ngIf="state == 'download'">
-            <p class="help-block">
-                <i class="fa fa-cog fa-spin" aria-hidden="true"></i>
-                Downloading ... {{download_path}}</p>
-            <progressbar type="success" [value]="download_progress"><b>{{download_progress|number:'.0'}}%</b></progressbar>
+            <div class="col-sm-4">
+                Download ThinLink Client
             </div>
-            <div *ngIf="downloaded">
-            <i class="fa fa-check" aria-hidden="true"></i>
+            <div class="col-sm-8">
+                <p *ngIf="state == 'download'" class="help-block">
+                    <i class="fa fa-cog fa-spin" aria-hidden="true"></i>
+                    Downloading ... {{download_path}}
+                    <progressbar type="success" [value]="download_progress"><b>{{download_progress|number:'.0'}}%</b></progressbar>
+                </p>
+                <p *ngIf="download_error" class="alert alert-danger">{{download_error}}</p>
+                <p *ngIf="downloaded">
+                    <i class="fa fa-check" aria-hidden="true"></i>
+                </p>
             </div>
-        </div>
         </div>         
     </li>
     <li class="list-group-item">
@@ -58,15 +63,15 @@
             <div class="col-sm-4">
                 Install ThinLink Client
             </div>
-            <div class="col-sm-8">
-                <div *ngIf="state == 'install'">
-                <p class="help-block">
-                    <i class="fa fa-cog fa-spin" aria-hidden="true"></i> Installing ... (please follow installer instruction)</p>  
+            <div class="col-sm-8">   
+                <p *ngIf="state == 'install'" class="help-block">
+                    <i class="fa fa-cog fa-spin" aria-hidden="true"></i> 
+                    Installing ... (Please follow installer instruction)
+                </p>  
                 <p *ngIf="install_error" class="alert alert-danger">{{install_error}}</p>
-                </div>
-                <div *ngIf="installed">
+                <p *ngIf="installed">
                     <i class="fa fa-check" aria-hidden="true"></i>
-                </div>
+                </p>
             </div>
         </div>         
     </li>
@@ -86,12 +91,10 @@
                 Configure ThinLinc
             </div>
             <div class="col-sm-8">
-                <div *ngIf="state == 'thinlinc'">
-                    <p class="help-block">
-                        <i class="fa fa-cog fa-spin" aria-hidden="true"></i> Configuring
-                    </p>  
+                <p  *ngIf="state == 'configure'" class="help-block">
+                    <i class="fa fa-cog fa-spin" aria-hidden="true"></i> Configuring
+                </p>  
                 <p *ngIf="configure_error" class="alert alert-danger">{{configure_error}}</p>
-                </div>
                 <div *ngIf="configured">
                     <i class="fa fa-check" aria-hidden="true"></i>
                 </div>            

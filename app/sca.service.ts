@@ -22,7 +22,7 @@ export class SCAService {
     
     generateSSHKeys() {
         return this.http.get(SCAService.PATH + '/resource/gensshkey')
-        .map(response => response.json());
+        .map(res => res.json());
     }
     
     storeSSHKey(username, password, pubkey, comment) {
@@ -36,7 +36,7 @@ export class SCAService {
             comment: comment,
             host: "karst.uits.iu.edu"
         }), {headers: headers})
-        .map(response => response.json());
+        .map(res => res.json());
     }
     
     static homedir() {

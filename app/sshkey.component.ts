@@ -1,4 +1,4 @@
-import { Component, Input, Injectable, NgZone } from '@angular/core';
+import { Directive, Component, Input, Injectable, NgZone } from '@angular/core';
 import { ToasterService } from 'angular2-toaster/angular2-toaster';
 //import { HTTP_PROVIDERS }    from '@angular/http';
 import { SCAService, Broadcaster } from './sca.service';
@@ -26,6 +26,7 @@ export class SSHKeyComponent {
     private public_key_path = _path.join(SCAService.homedir(), '.ssh', this.id+'.id_rsa.pub');
     
     installed = false;
+    sshkey_error: string = "";
     status: string = "";
     
     private key: string = null;
@@ -37,7 +38,7 @@ export class SSHKeyComponent {
         private sca: SCAService,
         private broadcaster: Broadcaster
     ) {
-        console.log("ctor sshkey");
+        //console.log("ctor sshkey");
         this.toasterService = toasterService;
         this._ngZone = _ngZone;
         this.sca = sca;
@@ -52,10 +53,14 @@ export class SSHKeyComponent {
             (next)=>this.store_local_sshkeys(next),
             (next)=>this.store_remote_sshkeys(next),
         ], (err) => {
-            if(err) return this.status = err;
+            if(err) {
+                this.status = err;
+                this.state = 'failed';
+                return;
+            }
             this._ngZone.run(() => {
                 this.installed = true;
-                this.state = "thinlinc";
+                this.state = "configure";
                 this.broadcaster.emit('done_sshkey', {
                     //username: this.model.username,
                     private_key_path: this.private_key_path,
@@ -86,7 +91,22 @@ export class SSHKeyComponent {
                 this.pubkey = data.pubkey;
                 next();
             },
-            err => this.toasterService.pop('error', err)
+            err => {
+                console.dir(err);
+                this._ngZone.run(() => {
+                    // this.toasterService.pop('error', err)
+                    //var body = JSON.parse(err._body);
+                    try {
+                        var body = JSON.parse(err._body);
+                        //this.toasterService.pop('error', "Failed to store SSH key", body.message);
+                        this.sshkey_error = body.message;
+                    } catch (ex) {
+                       this.sshkey_error = "Failed to Generate SSH Key.";       
+                    }                          
+                    this.state = "failed"; //doesn't update appcomponent state (no 2-way binding?)
+                    this.broadcaster.emit('failed');
+                });
+            }
         );
     }
     
@@ -115,9 +135,18 @@ export class SSHKeyComponent {
                 next();
             },
             err => {
-                var body = JSON.parse(err._body);
-                this.toasterService.pop('error', "Failed to store SSH key", body.message);
                 console.dir(err);
+                this._ngZone.run(() => {
+                    try {
+                        var body = JSON.parse(err._body);
+                        //this.toasterService.pop('error', "Failed to store SSH key", body.message);
+                        this.sshkey_error = body.message;
+                    } catch (ex) {
+                       this.sshkey_error = "Failed to install SSH Key.";       
+                    }               
+                    this.state = "failed"; //doesn't update appcomponent state (no 2-way binding?)
+                    this.broadcaster.emit('failed');
+                });
             }
         );
     }
