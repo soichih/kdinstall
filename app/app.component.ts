@@ -112,7 +112,10 @@ export class AppComponent {
         this.install_cmd = "";
         this.download_path = os.tmpdir()+'/'+this.installer_name;
         this.logo_path = "c:/branding.png"; //TODO..
-        this.tlclient = "C:\Program Files (x86)\ThinLinc Client\tlclient.exe"; //TODO?
+
+        //TODO - I need to get this info from installer, or somehow find where tlclient.exe is installed.. 
+        this.tlclient = "C:\\Program Files (x86)\\ThinLinc Client\\tlclient.exe"; 
+
         break;
       case "darwin":
         this.installer_name = "tl-4.5.0_4930-client-osx.iso";
@@ -127,7 +130,6 @@ export class AppComponent {
       }
       
       //console.log("logo_path:"+this.logo_path);
-      
       this.broadcaster.on('done_sshkey', (e)=>{ 
         console.log("done installing sshkey");
         this.configure(e);
@@ -163,8 +165,7 @@ export class AppComponent {
       //this.toasterService.pop('success', 'Args Title', 'Args Body'); 
       
       //TODO - handle case: can't write
-      //TODO - handle case: file already exists
-//      request_progress(request('https://www.cendio.com/downloads/clients/tl-4.5.0-4930-client-linux-dynamic-x86_64.tar.gz'), {
+      //TODO - test if it failes to download
       fs.stat(this.download_path, (err, stats) => {
         if(!err && stats) {
           console.log(this.download_path+ " already exist.. skipping");
@@ -246,8 +247,11 @@ export class AppComponent {
         (next) => thinlinc.setConfig("FULL_SCREEN_ALL_MONITORS", "0", next),     
         (next) => thinlinc.setConfig("FULL_SCREEN_MODE", "0", next),    
 
-        //(next) => thinlinc.setConfig("REMOTE_RESIZE", "0", next),   
-        //(next) => thinlinc.setConfig("SCREEN_SIZE_SELECTION", "5", next),           
+        (next) => thinlinc.setConfig("REMOTE_RESIZE", "0", next),  
+        
+        //I think this breaks the windows thinlinc?  
+        //(next) => thinlinc.setConfig("SCREEN_SIZE_SELECTION", "5", next),     
+              
         /*  
         (next) => {
           console.log("installing branding logo");

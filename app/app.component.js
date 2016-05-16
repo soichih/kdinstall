@@ -93,7 +93,8 @@ var AppComponent = (function () {
                 this.install_cmd = "";
                 this.download_path = os.tmpdir() + '/' + this.installer_name;
                 this.logo_path = "c:/branding.png"; //TODO..
-                this.tlclient = "C:\Program Files (x86)\ThinLinc Client\tlclient.exe"; //TODO?
+                //TODO - I need to get this info from installer, or somehow find where tlclient.exe is installed.. 
+                this.tlclient = "C:\\Program Files (x86)\\ThinLinc Client\\tlclient.exe";
                 break;
             case "darwin":
                 this.installer_name = "tl-4.5.0_4930-client-osx.iso";
@@ -137,8 +138,7 @@ var AppComponent = (function () {
         this.state = "download";
         //this.toasterService.pop('success', 'Args Title', 'Args Body'); 
         //TODO - handle case: can't write
-        //TODO - handle case: file already exists
-        //      request_progress(request('https://www.cendio.com/downloads/clients/tl-4.5.0-4930-client-linux-dynamic-x86_64.tar.gz'), {
+        //TODO - test if it failes to download
         fs.stat(this.download_path, function (err, stats) {
             if (!err && stats) {
                 console.log(_this.download_path + " already exist.. skipping");
@@ -219,6 +219,7 @@ var AppComponent = (function () {
             //recommended in KB.
             function (next) { return thinlinc.setConfig("FULL_SCREEN_ALL_MONITORS", "0", next); },
             function (next) { return thinlinc.setConfig("FULL_SCREEN_MODE", "0", next); },
+            function (next) { return thinlinc.setConfig("REMOTE_RESIZE", "0", next); },
         ], function (err) {
             _this._ngZone.run(function () {
                 if (err) {
