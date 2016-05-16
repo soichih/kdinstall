@@ -63,6 +63,7 @@ export class AppComponent {
     configured: boolean = false;
     configure_error: string = "";
     logo_path: string = null; //location for custom thinlinc branding
+    tlclient: string = "tlclient";
     
     @ViewChild('focus') focus_elem;
         
@@ -111,6 +112,7 @@ export class AppComponent {
         this.install_cmd = "";
         this.download_path = os.tmpdir()+'/'+this.installer_name;
         this.logo_path = "c:/branding.png"; //TODO..
+        this.tlclient = "C:\Program Files (x86)\ThinLinc Client\tlclient.exe"; //TODO?
         break;
       case "darwin":
         this.installer_name = "tl-4.5.0_4930-client-osx.iso";
@@ -244,8 +246,8 @@ export class AppComponent {
         (next) => thinlinc.setConfig("FULL_SCREEN_ALL_MONITORS", "0", next),     
         (next) => thinlinc.setConfig("FULL_SCREEN_MODE", "0", next),    
         
-        (next) => thinlinc.setConfig("REMOTE_RESIZE", "0", next),   
-        (next) => thinlinc.setConfig("SCREEN_SIZE_SELECTION", "5", next),           
+        //(next) => thinlinc.setConfig("REMOTE_RESIZE", "0", next),   
+        //(next) => thinlinc.setConfig("SCREEN_SIZE_SELECTION", "5", next),           
         /*  
         (next) => {
           console.log("installing branding logo");
@@ -284,7 +286,7 @@ export class AppComponent {
     }
     
     launch_tl() {
-      spawn('tlclient', {detached: true});
+      spawn(this.tlclient, {detached: true});
       
       ipcRenderer.send('quit');
       /*
