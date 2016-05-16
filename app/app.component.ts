@@ -1,43 +1,271 @@
-import { Component } from '@angular/core';
+import { Component, NgZone } from '@angular/core';
+import { NgForm } from '@angular/common';
+import { PROGRESSBAR_DIRECTIVES } from 'ng2-bootstrap';
+import {ToasterContainerComponent, ToasterService} from 'angular2-toaster/angular2-toaster';
+//import { FontAwesomeDirective } from 'ng2-fontawesome';
+import { SSHKeyComponent } from './sshkey.component'
+import { Broadcaster } from './sca.service';
+
+declare function nodeRequire(name: string);
 
 //import fs from '@node/fs';
-var fs = nodeRequire("fs");
-var async = nodeRequire("async");
+const fs = nodeRequire("fs");
+const async = nodeRequire("async");
+const request = nodeRequire('request');
+const request_progress = nodeRequire('request-progress');
+const sudo = nodeRequire('electron-sudo');
+const os = nodeRequire('os');
+const whereis = nodeRequire('whereis');
+const thinlinc = nodeRequire('thinlinc');
+const spawn = nodeRequire('child_process').spawn;
+const ipcRenderer = nodeRequire('electron').ipcRenderer;    
 
 @Component({
-  selector: 'my-app',
-  template: `<h1>My First Angular 2 App</h1>
-  <ul>
-    <li *ngFor="let name of names">{{name}}</li>
-  </ul>
-  `
+  selector: 'kdinstall',
+  styles: [`
+    .something {
+      color: red;
+    }
+  `],
+  templateUrl: 'app/app.html',
+  directives: [
+    PROGRESSBAR_DIRECTIVES, 
+    ToasterContainerComponent,
+    SSHKeyComponent,
+  ],
+  viewProviders: [Broadcaster],
+  providers: [ToasterService], 
 })
 export class AppComponent { 
-    names: string[] = [];  
     
-    constructor() {
-      fs.readFile("package.json", (err, data)=> {
-        console.dir(data.toString());
+    state: string = "start";
+    
+    //start
+    submitted: boolean = false;
+    form = {
+        username: "",
+        password: "", 
+    };
+    
+    //download / install thinlinc
+    downloaded: boolean = false;
+    download_progress: number = 0;
+    download_path: string = null;
+    installer_name: string = null;
+    install_cmd: string = null;
+    
+    //sshkey
+    installed: boolean = false;
+    install_error: string = "";
+    
+    //thinlinc
+    configured: boolean = false;
+    configure_error: string = "";
+    logo_path: string = null; //location for custom thinlinc branding
+        
+    constructor(
+      private toasterService: ToasterService, 
+      private _ngZone: NgZone, 
+      private broadcaster: Broadcaster) {
+        
+      this.toasterService = toasterService;
+      
+      //let's just support x64 for now..
+      if(os.arch() != "x64") {
+        this.toasterService.pop('error', 'Unsupported Architecture', os.arch());
+        return;
+      }
+
+      //determine which installer to use
+      switch(os.platform()) {
+      case "linux":
+        //determine yum or dpkg to use..
+        whereis('yum', (err, path)=> {
+          if(err) {
+            whereis('dpkg', (err, path)=> {
+              if(err) {
+                this.toasterService.pop('error', 'Unsupported package manager', "Couldn't find yum nor dpkg");
+              } else {
+                //this._ngZone.run(() => {
+                //}); //this is the new apply?
+                this.installer_name = "thinlinc-client_4.5.0-4930_amd64.deb";  
+                this.install_cmd = "dpkg -i";
+                this.download_path = os.tmpdir()+'/'+this.installer_name;
+              }
+            });
+          } else {
+            this.installer_name = "thinlinc-client-4.5.0-4930.x86_64.rpm";
+            this.install_cmd = "yum localinstall";
+            this.download_path = os.tmpdir()+'/'+this.installer_name;
+          }
+        });
+        this.logo_path = "/opt/thinlinc/lib/tlclient/branding.png";
+        break;
+      case "win32":
+        this.installer_name = "tl-4.5.0-client-windows.exe";
+        this.install_cmd = "";
+        this.download_path = os.tmpdir()+'/'+this.installer_name;
+        this.logo_path = "c:/branding.png"; //TODO..
+        break;
+      case "darwin":
+        this.installer_name = "tl-4.5.0_4930-client-osx.iso";
+        this.install_cmd = "todo";
+        this.download_path = os.tmpdir()+'/'+this.installer_name;
+        this.logo_path = "/Applications/Thinlinc Client/Contents/lib/tlclient/branding.png";
+        break;
+      default:
+        this.toasterService.pop('error', 'Unsupported Platform', os.platform());
+        return;
+      }
+      
+      //console.log("logo_path:"+this.logo_path);
+      
+      this.broadcaster.on('done_sshkey', (e)=>{ 
+        console.log("done installing sshkey");
+        this.configure(e);
       });
+    }
+    
+    stop() {
+      //TODO - depending on the state, do some cleanup
+      this.state = "start";
+      this.download_progress = 0;
+    }
+    
+    submit() {
+      this.submitted = true;
+      this.download();
+    }
+    
+    download() {
+      this.state = "download";
+      //this.toasterService.pop('success', 'Args Title', 'Args Body'); 
       
-      this.names.push("sage");
-      this.names.push("soichi");
-      this.names.push("mae");
-      
+      //TODO - handle case: can't write
+      //TODO - handle case: file already exists
+//      request_progress(request('https://www.cendio.com/downloads/clients/tl-4.5.0-4930-client-linux-dynamic-x86_64.tar.gz'), {
+      fs.stat(this.download_path, (err, stats) => {
+        if(!err && stats) {
+          console.log(this.download_path+ " already exist.. skipping");
+            this._ngZone.run(() => {
+              this.downloaded = true;
+              this.install();
+            });
+        } else {
+          request_progress(request('https://www.cendio.com/downloads/clients/'+this.installer_name), {
+            throttle: 200,
+            //delay: 1000
+          })
+          .on('progress', (state) => {
+            this._ngZone.run(() => {
+              this.download_progress = state.percentage * 100;
+            }); //this is the new apply?
+          })
+          .on('error', (err) => {
+            this.toasterService.pop('error', 'Download Failed', err);
+          })
+          .on('end', (err) => {   
+            if(err) return console.error(err);
+            this._ngZone.run(() => {
+              this.downloaded = true;
+              this.install();
+            });
+          })
+          .pipe(fs.createWriteStream(this.download_path));          
+        }
+      });
+    }
+    
+    install() {
+        this.state = "install";
+        var options = {
+          name: 'ThinLink Client Installer',
+          process: {
+            options: {},
+            on: function(ps) {
+              ps.stdout.on('data', function(data) {
+                console.log(data.toString());
+              });
+              ps.stderr.on('data', function(data) {
+                console.error(data.toString());
+              });
+            }
+          }
+        };
+        
+        //run the installer as root
+        sudo.exec(this.install_cmd+' '+this.download_path, options, (err, data) => {
+          console.log(data);
+          this._ngZone.run(() => {
+            if(err) {
+              this.install_error = err;
+            } else {
+              this.installed = true;
+              this.state = "sshkey";
+              this.broadcaster.emit('run_sshkey');
+            }
+          });
+        });       
+    }
+    
+    configure(e) {
       async.series([
-        (next)=>{
-          this.names.push("async.1");
-          next();
-        },
-        (next)=>{
-          this.names.push("async.2");
-          next();
-        },
-        (next)=>{
-          this.names.push("async.3");
-          next();
-        },
-      ]);
+        (next) => thinlinc.setConfig("AUTHENTICATION_METHOD", "publickey", next),
+        (next) => thinlinc.setConfig("LOGIN_NAME", this.form.username, next),
+        (next) => thinlinc.setConfig("PRIVATE_KEY", e.private_key_path, next),
+        (next) => thinlinc.setConfig("SERVER_NAME", "desktop.karst.uits.iu.edu", next),
+        
+        //recommended in KB.
+        (next) => thinlinc.setConfig("FULL_SCREEN_ALL_MONITORS", "0", next),     
+        (next) => thinlinc.setConfig("FULL_SCREEN_MODE", "0", next),    
+        
+        (next) => thinlinc.setConfig("REMOTE_RESIZE", "0", next),   
+        (next) => thinlinc.setConfig("SCREEN_SIZE_SELECTION", "5", next),           
+        /*  
+        (next) => {
+          console.log("installing branding logo");
+          sudo.exec('cp images/branding.png '+this.logo_path, {
+            name: 'ThinLink Client Installer',
+            process: {
+              options: {},
+              on: function(ps) {
+                ps.stdout.on('data', function(data) {
+                  console.log(data.toString());
+                });
+                ps.stderr.on('data', function(data) {
+                  console.error(data.toString());
+                });
+              }
+            }           
+          }, next);
+        }  
+        */        
+      ], (err)=> {
+        this._ngZone.run(() => {
+          if(err) {
+            this.configure_error = err;
+          } else {
+            this.configured = true;
+            this.state = "finished";
+          }
+        });
+      });
+    }
+    
+    close() {
+      console.log("close");
+      ipcRenderer.send('quit');
+    }
+    
+    launch_tl() {
+      spawn('tlclient', {detached: true});
       
+      ipcRenderer.send('quit');
+      /*
+      //not sure if I really need timeout.. but just to be safe
+      setTimeout(()=>{
+          ipcRenderer.send('quit');
+      }, 1);
+      */
     }
 }

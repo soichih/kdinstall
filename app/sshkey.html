@@ -1,0 +1,9 @@
+<div *ngIf="!installed && state == 'sshkey'">
+    <p class="help-block">
+    <i class="fa fa-cog fa-spin" aria-hidden="true"></i> {{status}}</p>  
+    <p *ngIf="install_error" class="alert alert-danger">{{install_error}}</p>
+</div>
+
+<div *ngIf="installed">
+    <i class="fa fa-check" aria-hidden="true"></i>
+</div>

@@ -18,7 +18,7 @@ function createWindow() {
   win.loadURL(`file://${__dirname}/index.html`);
 
   // Open the DevTools.
-  win.webContents.openDevTools();
+  //win.webContents.openDevTools();
 
   // Emitted when the window is closed.
   win.on('closed', () => {
@@ -28,6 +28,7 @@ function createWindow() {
     win = null;
   });
 }
+
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -50,7 +51,16 @@ app.on('activate', () => {
     createWindow();
   }
 });
-    
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
+
+console.log("registering");
+electron.ipcMain.on('show-console', (e) => {
+  //console.log("show-consolle called");
+  win.webContents.openDevTools();
+})
+electron.ipcMain.on('quit', () => {
+  console.log("quit request");
+  app.quit();
+})

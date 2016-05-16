@@ -1,10 +1,15 @@
 <html>
   <head>
-    <title>Angular 2 QuickStart</title>
+    <title>Karst Desktop Client Installer</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="styles.css">
 
+    <!--<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lato:400,700">-->
+    <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="node_modules/angular2-toaster/lib/toaster.css" />
+    <link rel="stylesheet" href="node_modules/font-awesome/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="styles.css">
+     
     <!-- 1. Load libraries -->
      <!-- Polyfill(s) for older browsers -->
     <script src="node_modules/es6-shim/es6-shim.min.js"></script>
@@ -16,7 +21,7 @@
     <!-- 2. Configure SystemJS -->
     <script src="systemjs.config.js"></script>
     <script>
-          global.nodeRequire = function (modulePath) {
+      global.nodeRequire = function (modulePath) {
       return require(modulePath);
     };
     </script>
@@ -27,11 +32,44 @@
 
   <!-- 3. Display the application -->
   <body>
-    <my-app>Loading...</my-app>
+    
+     <div class="container">
+      <kdinstall><h3>Starting...</h3></kdinstall>
+    </div>
+    
     <footer>
-        We are using node <script>document.write(process.versions.node)</script>,
-        Chrome <script>document.write(process.versions.chrome)</script>,
-        and Electron <script>document.write(process.versions.electron)</script>.
+        <div class="container">
+          <!--
+          We are using node <script>document.write(process.versions.node)</script>,
+          Chrome <script>document.write(process.versions.chrome)</script>,
+          and Electron <script>document.write(process.versions.electron)</script>.
+          -->
+          <!--
+          <script>
+          var os = require('os');
+          </script>
+          os.platform: <script>document.write(os.platform())</script>
+          os.arch: <script>document.write(os.arch())</script>
+          -->
+          <div class="iulogo"></div>
+          <p>INDIANA UNIVERSITY | SciApt 
+          <span class="pull-right clickable" onclick="open_devtool()">
+            <script>
+            let pkginfo = require('./package.json');
+            document.write(pkginfo.version);
+            </script>
+          </span></p>
+        </div>
     </footer>
+  
+    <script src="node_modules/jquery/dist/jquery.min.js"></script>
+    <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+    <script>
+    var ipcRenderer = require('electron').ipcRenderer;     
+    function open_devtool() {
+      //console.log("opendevtool");
+      ipcRenderer.send('show-console');
+    }
+    </script>
   </body>
 </html>

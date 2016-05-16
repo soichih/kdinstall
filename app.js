@@ -13,7 +13,7 @@ function createWindow() {
     // and load the index.html of the app.
     win.loadURL("file://" + __dirname + "/index.html");
     // Open the DevTools.
-    win.webContents.openDevTools();
+    //win.webContents.openDevTools();
     // Emitted when the window is closed.
     win.on('closed', function () {
         // Dereference the window object, usually you would store windows
@@ -42,5 +42,14 @@ app.on('activate', function () {
     }
 });
 // In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here. 
+// code. You can also put them in separate files and require them here.
+console.log("registering");
+electron.ipcMain.on('show-console', function (e) {
+    //console.log("show-consolle called");
+    win.webContents.openDevTools();
+});
+electron.ipcMain.on('quit', function () {
+    console.log("quit request");
+    app.quit();
+});
 //# sourceMappingURL=app.js.map

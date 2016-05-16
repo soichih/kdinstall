@@ -1,0 +1,110 @@
+<toaster-container></toaster-container>
+<h1>Karst Desktop Client Installer</h1>
+<!--
+<ul>
+<li *ngFor="let name of names">{{name}}</li>
+</ul>
+-->
+
+<div *ngIf="state != 'finished'">    
+    <p>This program will walk you through steps to install and configure Karst Desktop Client.</p>
+    <div [hidden]="submitted">
+        <p>Please enter Karst username / password in order to install a new public key.</p>
+        <form (ngSubmit)="submit()" #configureForm="ngForm">
+            <div class="form-group">
+                <label for="name">Username</label>
+                <input type="text" class="form-control" [(ngModel)]="form.username" ngControl="name" #name="ngForm" required>
+                <div [hidden]="name.valid || name.pristine" class="alert alert-danger">Please enter username</div>
+            </div>
+            <div class="form-group">
+                <label for="name">Password</label>
+                <input type="password" class="form-control" [(ngModel)]="form.password" ngControl="password" #password="ngForm" required>
+                <div [hidden]="password.valid || password.pristine" class="alert alert-danger">Please enter password</div>
+            </div>
+            <button type="submit" class="btn btn-default" [disabled]="!configureForm.form.valid">Install</button>
+        </form>
+    </div>
+<!--
+<button *ngIf="state == 'start'" class="btn btn-default" (click)="start()">Begin Install</button>
+-->
+<!--
+<button *ngIf="state != 'start'" class="btn btn-danger" (click)="stop()">Stop</button> 
+-->
+
+    <br>
+
+    <div class="panel panel-default" *ngIf="state != 'start'">
+    <ul class="list-group">
+    <li class="list-group-item">
+        <div class="row">
+        <div class="col-sm-4">
+            Download ThinLink Client
+        </div>
+        <div class="col-sm-8">
+            <div *ngIf="state == 'download'">
+            <p class="help-block">
+                <i class="fa fa-cog fa-spin" aria-hidden="true"></i>
+                Downloading ... {{download_path}}</p>
+            <progressbar type="success" [value]="download_progress"><b>{{download_progress|number:'.0'}}%</b></progressbar>
+            </div>
+            <div *ngIf="downloaded">
+            <i class="fa fa-check" aria-hidden="true"></i>
+            </div>
+        </div>
+        </div>         
+    </li>
+    <li class="list-group-item">
+        <div class="row">
+            <div class="col-sm-4">
+                Install ThinLink Client
+            </div>
+            <div class="col-sm-8">
+                <div *ngIf="state == 'install'">
+                <p class="help-block">
+                    <i class="fa fa-cog fa-spin" aria-hidden="true"></i> Installing ... (please follow installer instruction)</p>  
+                <p *ngIf="install_error" class="alert alert-danger">{{install_error}}</p>
+                </div>
+                <div *ngIf="installed">
+                    <i class="fa fa-check" aria-hidden="true"></i>
+                </div>
+            </div>
+        </div>         
+    </li>
+    <li class="list-group-item">
+        <div class="row">
+            <div class="col-sm-4">
+                Generate SSH Keys
+            </div>
+            <div class="col-sm-8">
+                <sshkey [state]="state" [form]="form"></sshkey>
+            </div>
+        </div>         
+    </li>
+    <li class="list-group-item">
+        <div class="row">
+            <div class="col-sm-4">
+                Configure ThinLinc
+            </div>
+            <div class="col-sm-8">
+                <div *ngIf="state == 'thinlinc'">
+                    <p class="help-block">
+                        <i class="fa fa-cog fa-spin" aria-hidden="true"></i> Configuring
+                    </p>  
+                <p *ngIf="configure_error" class="alert alert-danger">{{configure_error}}</p>
+                </div>
+                <div *ngIf="configured">
+                    <i class="fa fa-check" aria-hidden="true"></i>
+                </div>            
+            </div>
+        </div>         
+    </li>
+    </ul>
+    </div><!--panel-->
+</div><!-- !finished -->
+
+<div *ngIf="state == 'finished'">
+    <h3>Installation Completed!</h3>
+    <p>You are now ready to launch ThinLinc Client in order to access Karst Desktop</p>
+    <button class="btn btn-default" (click)="close()">Close</button>
+    <button class="btn btn-primary" (click)="launch_tl()">Launch Thinlinc Client</button>
+</div>
