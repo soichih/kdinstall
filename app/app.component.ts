@@ -245,7 +245,7 @@ export class AppComponent {
         //recommended in KB.
         (next) => thinlinc.setConfig("FULL_SCREEN_ALL_MONITORS", "0", next),     
         (next) => thinlinc.setConfig("FULL_SCREEN_MODE", "0", next),    
-        
+
         //(next) => thinlinc.setConfig("REMOTE_RESIZE", "0", next),   
         //(next) => thinlinc.setConfig("SCREEN_SIZE_SELECTION", "5", next),           
         /*  

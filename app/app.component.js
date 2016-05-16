@@ -52,6 +52,7 @@ var AppComponent = (function () {
         this.configured = false;
         this.configure_error = "";
         this.logo_path = null; //location for custom thinlinc branding
+        this.tlclient = "tlclient";
         this.toasterService = toasterService;
         //let's just support x64 for now..
         if (os.arch() != "x64") {
@@ -92,6 +93,7 @@ var AppComponent = (function () {
                 this.install_cmd = "";
                 this.download_path = os.tmpdir() + '/' + this.installer_name;
                 this.logo_path = "c:/branding.png"; //TODO..
+                this.tlclient = "C:\Program Files (x86)\ThinLinc Client\tlclient.exe"; //TODO?
                 break;
             case "darwin":
                 this.installer_name = "tl-4.5.0_4930-client-osx.iso";
@@ -217,8 +219,6 @@ var AppComponent = (function () {
             //recommended in KB.
             function (next) { return thinlinc.setConfig("FULL_SCREEN_ALL_MONITORS", "0", next); },
             function (next) { return thinlinc.setConfig("FULL_SCREEN_MODE", "0", next); },
-            function (next) { return thinlinc.setConfig("REMOTE_RESIZE", "0", next); },
-            function (next) { return thinlinc.setConfig("SCREEN_SIZE_SELECTION", "5", next); },
         ], function (err) {
             _this._ngZone.run(function () {
                 if (err) {
@@ -237,7 +237,7 @@ var AppComponent = (function () {
         ipcRenderer.send('quit');
     };
     AppComponent.prototype.launch_tl = function () {
-        spawn('tlclient', { detached: true });
+        spawn(this.tlclient, { detached: true });
         ipcRenderer.send('quit');
         /*
         //not sure if I really need timeout.. but just to be safe
@@ -247,7 +247,6 @@ var AppComponent = (function () {
         */
     };
     __decorate([
-        //location for custom thinlinc branding
         core_1.ViewChild('focus'), 
         __metadata('design:type', Object)
     ], AppComponent.prototype, "focus_elem", void 0);
