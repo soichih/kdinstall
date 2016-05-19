@@ -48,12 +48,5 @@
     "thinlinc": "^1.0.3",
     "whereis": "^0.4.0",
     "zone.js": "^0.6.12"
-  },
-  "devDependencies": {
-    "concurrently": "^2.0.0",
-    "electron-packager": "^7.0.1",
-    "electron-prebuilt": "^1.0.1",
-    "typescript": "^1.8.10",
-    "typings": "^0.8.1"
   }
 }
