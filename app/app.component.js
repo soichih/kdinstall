@@ -12,7 +12,7 @@ var core_1 = require('@angular/core');
 var ng2_bootstrap_1 = require('ng2-bootstrap');
 var angular2_toaster_1 = require('angular2-toaster/angular2-toaster');
 //import { FontAwesomeDirective } from 'ng2-fontawesome';
-var sshkey_component_1 = require('./sshkey.component');
+//import { SSHKeyComponent } from './sshkey.component'
 var sca_service_1 = require('./sca.service');
 //import fs from '@node/fs';
 var fs = nodeRequire("fs");
@@ -25,11 +25,14 @@ var whereis = nodeRequire('whereis');
 var thinlinc = nodeRequire('thinlinc');
 var spawn = nodeRequire('child_process').spawn;
 var ipcRenderer = nodeRequire('electron').ipcRenderer;
+var _path = nodeRequire('path');
 var AppComponent = (function () {
-    function AppComponent(toasterService, _ngZone, broadcaster) {
+    function AppComponent(toasterService, _ngZone, sca, broadcaster) {
+        //this.toasterService = toasterService;
         var _this = this;
         this.toasterService = toasterService;
         this._ngZone = _ngZone;
+        this.sca = sca;
         this.broadcaster = broadcaster;
         this.state = "start";
         //start
@@ -38,6 +41,15 @@ var AppComponent = (function () {
             username: "",
             password: "",
         };
+        //genssh
+        this.gensshed = false;
+        this.genssh_error = "";
+        this.genssh_status = "Initializing ...";
+        this.id = "sca." + Date.now();
+        this.private_key_path = _path.join(sca_service_1.SCAService.homedir(), '.ssh', this.id + '.id_rsa');
+        this.public_key_path = _path.join(sca_service_1.SCAService.homedir(), '.ssh', this.id + '.id_rsa.pub');
+        this.key = null;
+        this.pubkey = null;
         //download / install thinlinc
         this.downloaded = false;
         this.download_error = "";
@@ -52,15 +64,14 @@ var AppComponent = (function () {
         this.configured = false;
         this.configure_error = "";
         this.logo_path = null; //location for custom thinlinc branding
-        this.tlclient = "/opt/thinlinc/bin/tlclient";
-        this.toasterService = toasterService;
+        this.tlclient_path = null; //location where tlclient executable will be installed
         //let's just support x64 for now..
         if (os.arch() != "x64") {
             this.toasterService.pop('error', 'Unsupported Architecture', os.arch());
             this.state = 'failed';
             return;
         }
-        //determine which installer to use
+        //set various os specific configurations
         switch (os.platform()) {
             case "linux":
                 //determine yum or dpkg to use..
@@ -74,33 +85,38 @@ var AppComponent = (function () {
                             else {
                                 //this._ngZone.run(() => {
                                 //}); //this is the new apply?
-                                _this.installer_name = "thinlinc-client_4.5.0-4930_amd64.deb";
-                                _this.install_cmd = "dpkg -i";
+                                _this.installer_name = "linux-amd64.deb";
                                 _this.download_path = os.tmpdir() + '/' + _this.installer_name;
+                                _this.install_cmd = "dpkg -i " + _this.download_path;
                             }
                         });
                     }
                     else {
-                        _this.installer_name = "thinlinc-client-4.5.0-4930.x86_64.rpm";
-                        _this.install_cmd = "rpm --reinstall";
+                        _this.installer_name = "linux-x86_64.rpm";
                         _this.download_path = os.tmpdir() + '/' + _this.installer_name;
+                        _this.install_cmd = "rpm --reinstall " + _this.download_path;
                     }
                 });
                 this.logo_path = "/opt/thinlinc/lib/tlclient/branding.png";
+                this.tlclient_path = "/opt/thinlinc/bin/tlclient";
+                //console.log(_path.resolve(_path.dirname(process.execPath), ".."));
                 break;
             case "win32":
-                this.installer_name = "tl-4.5.0-client-windows.exe";
-                this.install_cmd = "";
+                this.installer_name = "windows.tar.gz";
                 this.download_path = os.tmpdir() + '/' + this.installer_name;
-                this.logo_path = "c:/branding.png"; //TODO..
+                var install_dir = _path.resolve(_path.dirname(process.execPath), ".."); //install on parent directory of where node is installed
+                this.install_cmd = "powershell.exe -nologo -noprofile -command \"& { Add-Type -A 'System.IO.Compression.FileSystem'; [IO.Compression.ZipFile]::ExtractToDirectory('" + this.download_path + "', '" + install_dir + "'); }\"";
+                //TODO - not sure where this go yet..
+                this.logo_path = "C:\\Program Files (x86)\\ThinLinc Client\\branding.png";
                 //TODO - I need to get this info from installer, or somehow find where tlclient.exe is installed.. 
-                this.tlclient = "C:\\Program Files (x86)\\ThinLinc Client\\tlclient.exe";
+                this.tlclient_path = "C:\\Program Files (x86)\\ThinLinc Client\\tlclient.exe";
                 break;
             case "darwin":
-                this.installer_name = "tl-4.5.0_4930-client-osx.iso";
-                this.install_cmd = "todo";
+                this.installer_name = "osx.tar.gz";
                 this.download_path = os.tmpdir() + '/' + this.installer_name;
-                this.logo_path = "/Applications/Thinlinc Client/Contents/lib/tlclient/branding.png";
+                this.install_cmd = "tar -xzf " + this.download_path + " -C /Applications";
+                this.logo_path = "/Applications/ThinLinc Client/Contents/lib/tlclient/branding.png";
+                this.tlclient_path = "/Applications/ThinLinc Client/Contents/MacOS/tlclient";
                 break;
             default:
                 this.toasterService.pop('error', 'Unsupported Platform', os.platform());
@@ -108,11 +124,13 @@ var AppComponent = (function () {
                 return;
         }
         //console.log("logo_path:"+this.logo_path);
-        this.broadcaster.on('done_sshkey', function (e) {
-            console.log("done installing sshkey");
-            _this.configure(e);
+        /*
+        this.broadcaster.on('done_sshkey', (e)=>{
+          console.log("done installing sshkey");
+          this.configure(e);
         });
-        this.broadcaster.on('failed', function () { return _this.state = 'failed'; });
+        this.broadcaster.on('failed', ()=>this.state = 'failed');
+        */
         setTimeout(function () {
             _this.focus_elem.nativeElement.focus();
         }, 1000);
@@ -125,13 +143,122 @@ var AppComponent = (function () {
     AppComponent.prototype.retry = function () {
         this.state = "start";
         this.submitted = false;
+        this.genssh_error = "";
         this.download_error = "";
         this.install_error = "";
         this.configure_error = "";
     };
     AppComponent.prototype.submit = function () {
         this.submitted = true;
-        this.download();
+        this.genssh();
+    };
+    AppComponent.prototype.genssh = function () {
+        var _this = this;
+        this.state = "genssh";
+        console.log("running sshkey installer");
+        async.series([
+            function (next) { return _this.mkdir_ssh(next); },
+            function (next) { return _this.request_sshkeys(next); },
+            function (next) { return _this.store_local_sshkeys(next); },
+            function (next) { return _this.store_remote_sshkeys(next); },
+        ], function (err) {
+            if (err) {
+                _this.genssh_error = err;
+                _this.state = 'failed';
+                return;
+            }
+            _this._ngZone.run(function () {
+                _this.gensshed = true;
+                _this.download();
+                /*
+                this.broadcaster.emit('done_sshkey', {
+                    //username: this.model.username,
+                    private_key_path: this.private_key_path,
+                });
+                */
+            });
+        });
+    };
+    AppComponent.prototype.mkdir_ssh = function (next) {
+        var _this = this;
+        this._ngZone.run(function () {
+            _this.genssh_status = "Making sure ~/.ssh exists";
+        });
+        fs.mkdir(sca_service_1.SCAService.homedir() + '/.ssh', function (err) {
+            if (!err || (err && err.code === 'EEXIST')) {
+                next();
+            }
+            else
+                next(err);
+        });
+    };
+    AppComponent.prototype.request_sshkeys = function (next) {
+        var _this = this;
+        this._ngZone.run(function () {
+            _this.genssh_status = "Generating SSH keys";
+        });
+        this.sca.generateSSHKeys()
+            .subscribe(function (data) {
+            _this.key = data.key;
+            _this.pubkey = data.pubkey;
+            next();
+        }, function (err) {
+            console.dir(err);
+            _this._ngZone.run(function () {
+                // this.toasterService.pop('error', err)
+                //var body = JSON.parse(err._body);
+                try {
+                    var body = JSON.parse(err._body);
+                    //this.toasterService.pop('error', "Failed to store SSH key", body.message);
+                    _this.genssh_error = body.message;
+                }
+                catch (ex) {
+                    _this.genssh_error = "Failed to Generate SSH Key.";
+                }
+                _this.state = "failed"; //doesn't update appcomponent state (no 2-way binding?)
+                //this.broadcaster.emit('failed');
+            });
+        });
+    };
+    AppComponent.prototype.store_local_sshkeys = function (next) {
+        var _this = this;
+        this._ngZone.run(function () {
+            _this.genssh_status = "Storing SSH keys";
+        });
+        fs.writeFile(this.private_key_path, this.key, function (err) {
+            if (err)
+                return next(err);
+            fs.chmod(_this.private_key_path, '600', function (err) {
+                if (err)
+                    return next(err);
+                fs.writeFile(_this.public_key_path, _this.pubkey, next);
+            });
+        });
+    };
+    AppComponent.prototype.store_remote_sshkeys = function (next) {
+        var _this = this;
+        this._ngZone.run(function () {
+            _this.genssh_status = "Storing SSH on Karst";
+        });
+        this.sca.storeSSHKey(this.form.username, this.form.password, this.pubkey, "SSH Key for Karst Desktop Access: sca." + this.id)
+            .subscribe(function (data) {
+            console.dir(data);
+            next();
+        }, function (err) {
+            console.dir(err);
+            _this._ngZone.run(function () {
+                try {
+                    var body = JSON.parse(err._body);
+                    //this.toasterService.pop('error', "Failed to store SSH key", body.message);
+                    _this.genssh_error = body.message;
+                }
+                catch (ex) {
+                    _this.genssh_error = "Failed to install SSH Key.";
+                }
+                _this.state = "failed"; //doesn't update appcomponent state (no 2-way binding?)
+                //this.broadcaster.emit('failed');
+            });
+        });
     };
     AppComponent.prototype.download = function () {
         var _this = this;
@@ -148,7 +275,7 @@ var AppComponent = (function () {
                 });
             }
             else {
-                request_progress(request('https://www.cendio.com/downloads/clients/' + _this.installer_name), {
+                request_progress(request('https://dl.dropboxusercontent.com/u/3209692/kdinstall/thinlinc/' + _this.installer_name), {
                     throttle: 200,
                 })
                     .on('progress', function (state) {
@@ -179,7 +306,7 @@ var AppComponent = (function () {
         var _this = this;
         this.state = "install";
         var options = {
-            name: 'ThinLink Client Installer',
+            name: 'Installing ThinLink Client',
             process: {
                 options: {},
                 on: function (ps) {
@@ -194,7 +321,7 @@ var AppComponent = (function () {
             }
         };
         //run the installer as root
-        sudo.exec(this.install_cmd + ' ' + this.download_path, options, function (err, data) {
+        sudo.exec(this.install_cmd, options, function (err, data) {
             console.log(data); //message from installer... should I display?
             _this._ngZone.run(function () {
                 if (err) {
@@ -203,18 +330,18 @@ var AppComponent = (function () {
                 }
                 else {
                     _this.installed = true;
-                    _this.state = "sshkey";
-                    _this.broadcaster.emit('run_sshkey');
+                    _this.configure();
                 }
             });
         });
     };
-    AppComponent.prototype.configure = function (e) {
+    AppComponent.prototype.configure = function () {
         var _this = this;
+        this.state = "configure";
         async.series([
             function (next) { return thinlinc.setConfig("AUTHENTICATION_METHOD", "publickey", next); },
             function (next) { return thinlinc.setConfig("LOGIN_NAME", _this.form.username, next); },
-            function (next) { return thinlinc.setConfig("PRIVATE_KEY", e.private_key_path, next); },
+            function (next) { return thinlinc.setConfig("PRIVATE_KEY", _this.private_key_path, next); },
             function (next) { return thinlinc.setConfig("SERVER_NAME", "desktop.karst.uits.iu.edu", next); },
             //recommended in KB.
             function (next) { return thinlinc.setConfig("FULL_SCREEN_ALL_MONITORS", "0", next); },
@@ -238,7 +365,7 @@ var AppComponent = (function () {
         ipcRenderer.send('quit');
     };
     AppComponent.prototype.launch_tl = function () {
-        spawn(this.tlclient, { detached: true });
+        spawn(this.tlclient_path, { detached: true });
         ipcRenderer.send('quit');
         /*
         //not sure if I really need timeout.. but just to be safe
@@ -248,6 +375,7 @@ var AppComponent = (function () {
         */
     };
     __decorate([
+        //location where tlclient executable will be installed
         core_1.ViewChild('focus'), 
         __metadata('design:type', Object)
     ], AppComponent.prototype, "focus_elem", void 0);
@@ -259,12 +387,11 @@ var AppComponent = (function () {
             directives: [
                 ng2_bootstrap_1.PROGRESSBAR_DIRECTIVES,
                 angular2_toaster_1.ToasterContainerComponent,
-                sshkey_component_1.SSHKeyComponent,
             ],
             viewProviders: [sca_service_1.Broadcaster],
-            providers: [angular2_toaster_1.ToasterService],
+            providers: [angular2_toaster_1.ToasterService, sca_service_1.SCAService],
         }), 
-        __metadata('design:paramtypes', [angular2_toaster_1.ToasterService, core_1.NgZone, sca_service_1.Broadcaster])
+        __metadata('design:paramtypes', [angular2_toaster_1.ToasterService, core_1.NgZone, sca_service_1.SCAService, sca_service_1.Broadcaster])
     ], AppComponent);
     return AppComponent;
 }());

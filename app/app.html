@@ -43,6 +43,22 @@
     <li class="list-group-item">
         <div class="row">
             <div class="col-sm-4">
+                Generate SSH Keys
+            </div>
+            <div class="col-sm-8">
+                <p *ngIf="state == 'genssh'" class="help-block">
+                    <i class="fa fa-cog fa-spin" aria-hidden="true"></i> {{genssh_status}}
+                </p>  
+                <p *ngIf="genssh_error" class="alert alert-danger">{{genssh_error}}</p>
+                <div *ngIf="gensshed">
+                    <i class="fa fa-check" aria-hidden="true"></i>
+                </div>
+            </div>
+        </div>         
+    </li>
+    <li class="list-group-item">
+        <div class="row">
+            <div class="col-sm-4">
                 Download ThinLink Client
             </div>
             <div class="col-sm-8">
@@ -72,16 +88,6 @@
                 <p *ngIf="installed">
                     <i class="fa fa-check" aria-hidden="true"></i>
                 </p>
-            </div>
-        </div>         
-    </li>
-    <li class="list-group-item">
-        <div class="row">
-            <div class="col-sm-4">
-                Generate SSH Keys
-            </div>
-            <div class="col-sm-8">
-                <sshkey [state]="state" [form]="form"></sshkey>
             </div>
         </div>         
     </li>
