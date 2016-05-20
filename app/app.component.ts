@@ -17,7 +17,7 @@ const sudo = nodeRequire('electron-sudo');
 const os = nodeRequire('os');
 const whereis = nodeRequire('whereis');
 const thinlinc = nodeRequire('thinlinc');
-const spawn = nodeRequire('child_process').spawn;
+const child_process = nodeRequire('child_process');
 const ipcRenderer = nodeRequire('electron').ipcRenderer;    
 const _path = nodeRequire('path');
 
@@ -84,8 +84,15 @@ export class AppComponent {
       private _ngZone: NgZone, 
       private sca: SCAService,
       private broadcaster: Broadcaster) {
-        
-      //this.toasterService = toasterService;
+
+      //this temporarly patches the issue of "EPERM: operation not permitted, write" happens at sudo.exec()
+      process.stderr.write = console.error.bind(console); 
+      process.stdout.write = console.log.bind(console);        
+      /*
+
+      console.dir(process.stderr);
+      process.stderr.write("this should cause exception");
+      */
       
       //let's just support x64 for now..
       if(os.arch() != "x64") {
@@ -126,14 +133,16 @@ export class AppComponent {
       case "win32":
         this.installer_name = "windows.zip";
         this.download_path = os.tmpdir()+'/'+this.installer_name;
-        var install_dir = _path.resolve(_path.dirname(process.execPath), "..") //install on parent directory of where node is installed
+        var install_dir = child_process.execSync("echo %programfiles%").trim();//_path.resolve(_path.dirname(process.execPath), "..") //install on parent directory of where node is installed
+        
+        console.log("powershell.exe -nologo -noprofile -command \"& { Add-Type -A 'System.IO.Compression.FileSystem'; [IO.Compression.ZipFile]::ExtractToDirectory('"+this.download_path+"', '"+install_dir+"'); }\"");
         this.install_cmd = "powershell.exe -nologo -noprofile -command \"& { Add-Type -A 'System.IO.Compression.FileSystem'; [IO.Compression.ZipFile]::ExtractToDirectory('"+this.download_path+"', '"+install_dir+"'); }\"";
 
         //TODO - not sure where this go yet..
-        this.logo_path = "C:\\Program Files (x86)\\ThinLinc Client\\branding.png"; 
+        this.logo_path = "C:\\Program Files (x86)\\tl-4.5.0-client-windows\\branding.png"; 
         
         //TODO - I need to get this info from installer, or somehow find where tlclient.exe is installed.. 
-        this.tlclient_path = "C:\\Program Files (x86)\\ThinLinc Client\\tlclient.exe"; 
+        this.tlclient_path = "C:\\Program Files (x86)\\tl-4.5.0-client-windows\\tlclient.exe"; 
         break;
       case "darwin":
         this.installer_name = "osx.tar.gz";
@@ -271,7 +280,7 @@ export class AppComponent {
             "SSH Key for Karst Desktop Access: sca."+this.id)
         .subscribe(
             data => {
-                console.dir(data);
+                //console.dir(data);
                 next();
             },
             err => {
@@ -305,7 +314,7 @@ export class AppComponent {
               this.install();
             });
         } else {
-          request_progress(request('https://dl.dropboxusercontent.com/u/3209692/kdinstall/thinlinc/'+this.installer_name), {
+          request_progress(request('https://dl.dropboxusercontent.com/u/3209692/thinlinc/'+this.installer_name), {
             throttle: 200,
             //delay: 1000
           })
@@ -376,10 +385,11 @@ export class AppComponent {
         (next) => thinlinc.setConfig("SERVER_NAME", "desktop.karst.uits.iu.edu", next),
         
         //recommended in KB.
-        (next) => thinlinc.setConfig("FULL_SCREEN_ALL_MONITORS", "0", next),     
-        (next) => thinlinc.setConfig("FULL_SCREEN_MODE", "0", next),    
+        (next) => thinlinc.setConfig("FULL_SCREEN_ALL_MONITORS", 0, next),     
+        (next) => thinlinc.setConfig("FULL_SCREEN_MODE", 0, next),    
 
-        //(next) => thinlinc.setConfig("REMOTE_RESIZE", "1", next),  
+        //needed to get rid of scrollbar inside the client window
+        (next) => thinlinc.setConfig("REMOTE_RESIZE", 1, next),  
         
         //I think this breaks the windows thinlinc?  
         //(next) => thinlinc.setConfig("SCREEN_SIZE_SELECTION", "5", next),     
@@ -422,7 +432,7 @@ export class AppComponent {
     }
     
     launch_tl() {
-      spawn(this.tlclient_path, {detached: true});
+      child_process.spawn(this.tlclient_path, {detached: true});
       
       ipcRenderer.send('quit');
       /*

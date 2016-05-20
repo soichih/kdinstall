@@ -23,12 +23,11 @@ var sudo = nodeRequire('electron-sudo');
 var os = nodeRequire('os');
 var whereis = nodeRequire('whereis');
 var thinlinc = nodeRequire('thinlinc');
-var spawn = nodeRequire('child_process').spawn;
+var child_process = nodeRequire('child_process');
 var ipcRenderer = nodeRequire('electron').ipcRenderer;
 var _path = nodeRequire('path');
 var AppComponent = (function () {
     function AppComponent(toasterService, _ngZone, sca, broadcaster) {
-        //this.toasterService = toasterService;
         var _this = this;
         this.toasterService = toasterService;
         this._ngZone = _ngZone;
@@ -65,6 +64,14 @@ var AppComponent = (function () {
         this.configure_error = "";
         this.logo_path = null; //location for custom thinlinc branding
         this.tlclient_path = null; //location where tlclient executable will be installed
+        //this temporarly patches the issue of "EPERM: operation not permitted, write" happens at sudo.exec()
+        process.stderr.write = console.error.bind(console);
+        process.stdout.write = console.log.bind(console);
+        /*
+  
+        console.dir(process.stderr);
+        process.stderr.write("this should cause exception");
+        */
         //let's just support x64 for now..
         if (os.arch() != "x64") {
             this.toasterService.pop('error', 'Unsupported Architecture', os.arch());
@@ -102,14 +109,15 @@ var AppComponent = (function () {
                 //console.log(_path.resolve(_path.dirname(process.execPath), ".."));
                 break;
             case "win32":
-                this.installer_name = "windows.tar.gz";
+                this.installer_name = "windows.zip";
                 this.download_path = os.tmpdir() + '/' + this.installer_name;
-                var install_dir = _path.resolve(_path.dirname(process.execPath), ".."); //install on parent directory of where node is installed
+                var install_dir = child_process.execSync("echo %programfiles%").trim(); //_path.resolve(_path.dirname(process.execPath), "..") //install on parent directory of where node is installed
+                console.log("powershell.exe -nologo -noprofile -command \"& { Add-Type -A 'System.IO.Compression.FileSystem'; [IO.Compression.ZipFile]::ExtractToDirectory('" + this.download_path + "', '" + install_dir + "'); }\"");
                 this.install_cmd = "powershell.exe -nologo -noprofile -command \"& { Add-Type -A 'System.IO.Compression.FileSystem'; [IO.Compression.ZipFile]::ExtractToDirectory('" + this.download_path + "', '" + install_dir + "'); }\"";
                 //TODO - not sure where this go yet..
-                this.logo_path = "C:\\Program Files (x86)\\ThinLinc Client\\branding.png";
+                this.logo_path = "C:\\Program Files (x86)\\tl-4.5.0-client-windows\\branding.png";
                 //TODO - I need to get this info from installer, or somehow find where tlclient.exe is installed.. 
-                this.tlclient_path = "C:\\Program Files (x86)\\ThinLinc Client\\tlclient.exe";
+                this.tlclient_path = "C:\\Program Files (x86)\\tl-4.5.0-client-windows\\tlclient.exe";
                 break;
             case "darwin":
                 this.installer_name = "osx.tar.gz";
@@ -242,7 +250,7 @@ var AppComponent = (function () {
         });
         this.sca.storeSSHKey(this.form.username, this.form.password, this.pubkey, "SSH Key for Karst Desktop Access: sca." + this.id)
             .subscribe(function (data) {
-            console.dir(data);
+            //console.dir(data);
             next();
         }, function (err) {
             console.dir(err);
@@ -275,7 +283,7 @@ var AppComponent = (function () {
                 });
             }
             else {
-                request_progress(request('https://dl.dropboxusercontent.com/u/3209692/kdinstall/thinlinc/' + _this.installer_name), {
+                request_progress(request('https://dl.dropboxusercontent.com/u/3209692/thinlinc/' + _this.installer_name), {
                     throttle: 200,
                 })
                     .on('progress', function (state) {
@@ -344,9 +352,10 @@ var AppComponent = (function () {
             function (next) { return thinlinc.setConfig("PRIVATE_KEY", _this.private_key_path, next); },
             function (next) { return thinlinc.setConfig("SERVER_NAME", "desktop.karst.uits.iu.edu", next); },
             //recommended in KB.
-            function (next) { return thinlinc.setConfig("FULL_SCREEN_ALL_MONITORS", "0", next); },
-            function (next) { return thinlinc.setConfig("FULL_SCREEN_MODE", "0", next); },
-            function (next) { return thinlinc.setConfig("REMOTE_RESIZE", "0", next); },
+            function (next) { return thinlinc.setConfig("FULL_SCREEN_ALL_MONITORS", 0, next); },
+            function (next) { return thinlinc.setConfig("FULL_SCREEN_MODE", 0, next); },
+            //needed to get rid of scrollbar inside the client window
+            function (next) { return thinlinc.setConfig("REMOTE_RESIZE", 1, next); },
         ], function (err) {
             _this._ngZone.run(function () {
                 if (err) {
@@ -365,7 +374,7 @@ var AppComponent = (function () {
         ipcRenderer.send('quit');
     };
     AppComponent.prototype.launch_tl = function () {
-        spawn(this.tlclient_path, { detached: true });
+        child_process.spawn(this.tlclient_path, { detached: true });
         ipcRenderer.send('quit');
         /*
         //not sure if I really need timeout.. but just to be safe

@@ -45,7 +45,7 @@
     "request-progress": "^2.0.1",
     "rxjs": "5.0.0-beta.6",
     "systemjs": "0.19.27",
-    "thinlinc": "^1.0.3",
+    "thinlinc": "^1.0.6",
     "whereis": "^0.4.0",
     "zone.js": "^0.6.12"
   }
