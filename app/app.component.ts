@@ -124,7 +124,7 @@ export class AppComponent {
         //console.log(_path.resolve(_path.dirname(process.execPath), ".."));
         break;
       case "win32":
-        this.installer_name = "windows.tar.gz";
+        this.installer_name = "windows.zip";
         this.download_path = os.tmpdir()+'/'+this.installer_name;
         var install_dir = _path.resolve(_path.dirname(process.execPath), "..") //install on parent directory of where node is installed
         this.install_cmd = "powershell.exe -nologo -noprofile -command \"& { Add-Type -A 'System.IO.Compression.FileSystem'; [IO.Compression.ZipFile]::ExtractToDirectory('"+this.download_path+"', '"+install_dir+"'); }\"";
