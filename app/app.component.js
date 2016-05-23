@@ -314,7 +314,7 @@ var AppComponent = (function () {
         var _this = this;
         this.state = "install";
         var options = {
-            name: 'Installing ThinLink Client',
+            name: 'Installing ThinLinc Client',
             process: {
                 options: {},
                 on: function (ps) {

@@ -345,7 +345,7 @@ export class AppComponent {
     install() {
         this.state = "install";
         var options = {
-          name: 'Installing ThinLink Client',
+          name: 'Installing ThinLinc Client',
           process: {
             options: {},
             on: function(ps) {
@@ -398,7 +398,7 @@ export class AppComponent {
         (next) => {
           console.log("installing branding logo");
           sudo.exec('cp images/branding.png '+this.logo_path, {
-            name: 'ThinLink Client Installer',
+            name: 'ThinLinc Client Installer',
             process: {
               options: {},
               on: function(ps) {
