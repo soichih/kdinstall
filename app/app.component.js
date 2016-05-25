@@ -132,14 +132,6 @@ var AppComponent = (function () {
                 this.state = 'failed';
                 return;
         }
-        //console.log("logo_path:"+this.logo_path);
-        /*
-        this.broadcaster.on('done_sshkey', (e)=>{
-          console.log("done installing sshkey");
-          this.configure(e);
-        });
-        this.broadcaster.on('failed', ()=>this.state = 'failed');
-        */
         setTimeout(function () {
             _this.focus_elem.nativeElement.focus();
         }, 0);
@@ -179,12 +171,6 @@ var AppComponent = (function () {
             _this._ngZone.run(function () {
                 _this.gensshed = true;
                 _this.download();
-                /*
-                this.broadcaster.emit('done_sshkey', {
-                    //username: this.model.username,
-                    private_key_path: this.private_key_path,
-                });
-                */
             });
         });
     };
@@ -214,18 +200,14 @@ var AppComponent = (function () {
         }, function (err) {
             console.dir(err);
             _this._ngZone.run(function () {
-                // this.toasterService.pop('error', err)
-                //var body = JSON.parse(err._body);
                 try {
                     var body = JSON.parse(err._body);
-                    //this.toasterService.pop('error', "Failed to store SSH key", body.message);
                     _this.genssh_error = body.message;
                 }
                 catch (ex) {
                     _this.genssh_error = "Failed to Generate SSH Key.";
                 }
                 _this.state = "failed"; //doesn't update appcomponent state (no 2-way binding?)
-                //this.broadcaster.emit('failed');
             });
         });
     };
@@ -378,12 +360,6 @@ var AppComponent = (function () {
         //alert("launching:"+this.tlclient_path);
         child_process.spawn(this.tlclient_path, { detached: true });
         ipcRenderer.send('quit');
-        /*
-        //not sure if I really need timeout.. but just to be safe
-        setTimeout(()=>{
-            ipcRenderer.send('quit');
-        }, 1);
-        */
     };
     __decorate([
         //location where tlclient executable will be installed

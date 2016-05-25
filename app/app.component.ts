@@ -157,16 +157,7 @@ export class AppComponent {
         this.state = 'failed';
         return;
       }
-      
-      //console.log("logo_path:"+this.logo_path);
-      /*
-      this.broadcaster.on('done_sshkey', (e)=>{ 
-        console.log("done installing sshkey");
-        this.configure(e);
-      });
-      this.broadcaster.on('failed', ()=>this.state = 'failed');
-      */
-      
+           
       setTimeout(()=>{
         this.focus_elem.nativeElement.focus();
       }, 0);
@@ -209,12 +200,6 @@ export class AppComponent {
           this._ngZone.run(() => {
               this.gensshed = true;
               this.download();
-              /*
-              this.broadcaster.emit('done_sshkey', {
-                  //username: this.model.username,
-                  private_key_path: this.private_key_path,
-              });
-              */
           });
       });     
     }
@@ -244,17 +229,13 @@ export class AppComponent {
             err => {
                 console.dir(err);
                 this._ngZone.run(() => {
-                    // this.toasterService.pop('error', err)
-                    //var body = JSON.parse(err._body);
                     try {
                         var body = JSON.parse(err._body);
-                        //this.toasterService.pop('error', "Failed to store SSH key", body.message);
                         this.genssh_error = body.message;
                     } catch (ex) {
                        this.genssh_error = "Failed to Generate SSH Key.";       
                     }                          
                     this.state = "failed"; //doesn't update appcomponent state (no 2-way binding?)
-                    //this.broadcaster.emit('failed');
                 });
             }
         );
@@ -391,29 +372,7 @@ export class AppComponent {
 
         //needed to get rid of scrollbar inside the client window
         (next) => thinlinc.setConfig("REMOTE_RESIZE", 1, next),  
-        
-        //I think this breaks the windows thinlinc?  
-        //(next) => thinlinc.setConfig("SCREEN_SIZE_SELECTION", "5", next),     
-              
-        /*  
-        (next) => {
-          console.log("installing branding logo");
-          sudo.exec('cp images/branding.png '+this.logo_path, {
-            name: 'ThinLinc Client Installer',
-            process: {
-              options: {},
-              on: function(ps) {
-                ps.stdout.on('data', function(data) {
-                  console.log(data.toString());
-                });
-                ps.stderr.on('data', function(data) {
-                  console.error(data.toString());
-                });
-              }
-            }           
-          }, next);
-        }  
-        */        
+
       ], (err)=> {
         this._ngZone.run(() => {
           if(err) {
@@ -435,13 +394,6 @@ export class AppComponent {
     launch_tl() {
       //alert("launching:"+this.tlclient_path);
       child_process.spawn(this.tlclient_path, {detached: true});
-      
       ipcRenderer.send('quit');
-      /*
-      //not sure if I really need timeout.. but just to be safe
-      setTimeout(()=>{
-          ipcRenderer.send('quit');
-      }, 1);
-      */
     }
 }
