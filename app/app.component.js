@@ -111,13 +111,14 @@ var AppComponent = (function () {
             case "win32":
                 this.installer_name = "windows.zip";
                 this.download_path = os.tmpdir() + '/' + this.installer_name;
-                var install_dir = child_process.execSync("echo %programfiles%").trim(); //_path.resolve(_path.dirname(process.execPath), "..") //install on parent directory of where node is installed
+                var programfiles_dir = child_process.execSync("echo %programfiles%", { encoding: 'utf8' }).trim();
+                var install_dir = programfiles_dir + "\\ThinLinc";
                 console.log("powershell.exe -nologo -noprofile -command \"& { Add-Type -A 'System.IO.Compression.FileSystem'; [IO.Compression.ZipFile]::ExtractToDirectory('" + this.download_path + "', '" + install_dir + "'); }\"");
                 this.install_cmd = "powershell.exe -nologo -noprofile -command \"& { Add-Type -A 'System.IO.Compression.FileSystem'; [IO.Compression.ZipFile]::ExtractToDirectory('" + this.download_path + "', '" + install_dir + "'); }\"";
                 //TODO - not sure where this go yet..
-                this.logo_path = "C:\\Program Files (x86)\\tl-4.5.0-client-windows\\branding.png";
+                this.logo_path = install_dir + "\\branding.png";
                 //TODO - I need to get this info from installer, or somehow find where tlclient.exe is installed.. 
-                this.tlclient_path = "C:\\Program Files (x86)\\tl-4.5.0-client-windows\\tlclient.exe";
+                this.tlclient_path = install_dir + "\\tlclient.exe";
                 break;
             case "darwin":
                 this.installer_name = "osx.tar.gz";
@@ -141,7 +142,7 @@ var AppComponent = (function () {
         */
         setTimeout(function () {
             _this.focus_elem.nativeElement.focus();
-        }, 1000);
+        }, 0);
     }
     AppComponent.prototype.stop = function () {
         //TODO - depending on the state, do some cleanup
@@ -374,6 +375,7 @@ var AppComponent = (function () {
         ipcRenderer.send('quit');
     };
     AppComponent.prototype.launch_tl = function () {
+        //alert("launching:"+this.tlclient_path);
         child_process.spawn(this.tlclient_path, { detached: true });
         ipcRenderer.send('quit');
         /*

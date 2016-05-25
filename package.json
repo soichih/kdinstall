@@ -48,5 +48,9 @@
     "thinlinc": "^1.0.6",
     "whereis": "^0.4.0",
     "zone.js": "^0.6.12"
+  },
+  "devDependencies": {
+    "grunt": "^1.0.1",
+    "grunt-electron-installer": "^2.1.0"
   }
 }
