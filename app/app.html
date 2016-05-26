@@ -65,7 +65,7 @@
                 <p *ngIf="state == 'download'" class="help-block">
                     <i class="fa fa-cog fa-spin" aria-hidden="true"></i>
                     Downloading ... {{download_path}}
-                    <progressbar type="success" [value]="download_progress"><b>{{download_progress|number:'.0'}}%</b></progressbar>
+                    <progressbar type="success" [value]="download_progress"><b>{{download_progress.toFixed(0)}}%</b></progressbar>
                 </p>
                 <p *ngIf="download_error" class="alert alert-danger">{{download_error}}</p>
                 <p *ngIf="downloaded">

@@ -170,6 +170,7 @@ export class AppComponent {
     
     retry() {
       this.state = "start";
+      this.form.password = "";
       this.submitted = false;
       this.genssh_error = "";
       this.download_error = "";
