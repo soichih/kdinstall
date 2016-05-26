@@ -4,7 +4,6 @@ pubdir=/home/hayashis/Dropbox/Public/kdinstall
 #clean up old stuff
 rm -rf $builddir/*
 
-#run tsc one more time
 tsc
 
 electron-packager . --overwrite --version=1.0.1 --platform=linux --arch=x64 --out=$builddir
